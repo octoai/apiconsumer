@@ -1,4 +1,29 @@
 require 'kafka-consumer'
+require 'cassandra'
+
+
+
+class CassandraWriter
+
+  KEYSPACE = 'octo'
+
+  def initialize
+    # Connects to localhost by default
+    @cluster = Cassandra.cluster
+  end
+
+
+  def write(msg)
+    query = parse(msg)
+    puts query
+
+  end
+
+  def parse(msg)
+    return ''
+  end
+end
+
 
 
 class EventsConsumer
@@ -15,8 +40,9 @@ class EventsConsumer
   end
 
   def startConsuming
+    cw = CassandraWriter.new
     @consumer.each do |message|
-      puts message.value
+      cw.write(message.value)
     end
   end
 
