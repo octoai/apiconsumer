@@ -15,14 +15,21 @@ class CassandraWriter
 
   def prepareStatements
     @appInitStatement = @session.prepare("INSERT INTO app_init JSON ?")
+    @appLoginStatement = @session.prepare("INSERT INTO app_login JSON ?")
+    @appLogoutStatement = @session.prepare("INSERT INTO app_logout JSON ?")
   end
 
 
   def write(msg)
     msgParsed = parse(msg)
+    puts msgParsed[:event_name]
     case msgParsed.delete(:event_name)
     when 'app.init'
       @session.execute(@appInitStatement, arguments: [JSON.generate(msgParsed)])
+    when 'app.login'
+      @session.execute(@appLoginStatement, arguments: [JSON.generate(msgParsed)])
+    when 'app.logout'
+      @session.execute(@appLogoutStatement, arguments: [JSON.generate(msgParsed)])
     end
 
   end
