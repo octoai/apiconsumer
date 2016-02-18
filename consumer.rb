@@ -1,7 +1,6 @@
 require 'kafka-consumer'
 require 'cassandra'
-
-
+require 'json'
 
 class CassandraWriter
 
@@ -10,17 +9,36 @@ class CassandraWriter
   def initialize
     # Connects to localhost by default
     @cluster = Cassandra.cluster
+    @session = @cluster.connect(KEYSPACE)
+    prepareStatements
+  end
+
+  def prepareStatements
+    @appInitStatement = @session.prepare("INSERT INTO app_init JSON ?")
   end
 
 
   def write(msg)
-    query = parse(msg)
-    puts query
+    msgParsed = parse(msg)
+    case msgParsed.delete(:event_name)
+    when 'app.init'
+      @session.execute(@appInitStatement, arguments: [JSON.generate(msgParsed)])
+    end
 
   end
 
   def parse(msg)
-    return ''
+    msg2 = JSON.parse(msg)
+    msg = msg2
+    m = {
+      id: msg['uuid'],
+      enterpriseId: msg['enterprise']['id'],
+      event_name: msg['event_name'],
+      phone: msg.fetch('phoneDetails', {}),
+      userId: msg.fetch('userId', -1),
+      created_at: Time.now
+    }
+    return m
   end
 end
 
