@@ -17,6 +17,7 @@ class CassandraWriter
     @appInitStatement = @session.prepare("INSERT INTO app_init JSON ?")
     @appLoginStatement = @session.prepare("INSERT INTO app_login JSON ?")
     @appLogoutStatement = @session.prepare("INSERT INTO app_logout JSON ?")
+    @pageViewStatement = @session.prepare("INSERT INTO page_view JSON ?")
   end
 
 
@@ -30,6 +31,8 @@ class CassandraWriter
       @session.execute(@appLoginStatement, arguments: [JSON.generate(msgParsed)])
     when 'app.logout'
       @session.execute(@appLogoutStatement, arguments: [JSON.generate(msgParsed)])
+    when 'page.view'
+      @session.execute(@pageViewStatement, arguments: [JSON.generate(msgParsed)])
     end
 
   end
@@ -45,6 +48,14 @@ class CassandraWriter
       userId: msg.fetch('userId', -1),
       created_at: Time.now
     }
+    case msg['event_name']
+    when 'page.view'
+      m.merge!({
+        routeUrl: msg['routeUrl'],
+        categories: msg['categories'],
+        tags: msg['tags']
+      })
+    end
     return m
   end
 end
