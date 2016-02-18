@@ -26,13 +26,15 @@ class CassandraWriter
       "INSERT INTO page_view JSON ?")
     @productPageViewStatement = @session.prepare(
       "INSERT INTO productpage_view JSON ?")
+    @createUserStatement = @session.prepare(
+      "INSERT INTO user_intent (userId, enterpriseId, created_at) VALUES (?, ?, ?)")
   end
 
   # Maps the event names to prepared statements for execution
   def mapEventsToStatements
     @eventsMap = {
-      'app.init' => @appInitStatement,
-      'app.login' => @appLoginStatement,
+      'app.init' => [@appInitStatement, @createUserStatement],
+      'app.login' => [@appLoginStatement, @createUserStatement],
       'app.logout' => @appLogoutStatement,
       'page.view' => @pageViewStatement,
       'productpage.view' => @productPageViewStatement
@@ -43,8 +45,19 @@ class CassandraWriter
   # @param [Hash] msg The message hash
   def write(msg)
     msgParsed = parse(msg)
-    stmt = @eventsMap.fetch(msgParsed.delete(:event_name))
-    @session.execute(stmt, arguments: [JSON.generate(msgParsed)])
+    eventName = msgParsed.delete(:event_name)
+    stmt = @eventsMap.fetch(eventName)
+    if stmt.class == Array
+      stmt.each do |s|
+        if s == @createUserStatement
+          @session.execute(s, arguments: [ msgParsed[:userId].to_i, Cassandra::Uuid.new(msgParsed[:enterpriseId]), Time.now])
+        else
+          @session.execute(s, arguments: [JSON.generate(msgParsed)])
+        end
+      end
+    elsif stmt.class == String
+      @session.execute(stmt, arguments: [JSON.generate(msgParsed)])
+    end
   end
 
   # Parse the message
