@@ -11,41 +11,44 @@ class CassandraWriter
     @cluster = Cassandra.cluster
     @session = @cluster.connect(KEYSPACE)
     prepareStatements
+    mapEventsToStatements
   end
 
+  # Prepare all possible insert statements
   def prepareStatements
-    @appInitStatement = @session.prepare("INSERT INTO app_init JSON ?")
-    @appLoginStatement = @session.prepare("INSERT INTO app_login JSON ?")
-    @appLogoutStatement = @session.prepare("INSERT INTO app_logout JSON ?")
-    @pageViewStatement = @session.prepare("INSERT INTO page_view JSON ?")
+    @appInitStatement = @session.prepare(
+      "INSERT INTO app_init JSON ?")
+    @appLoginStatement = @session.prepare(
+      "INSERT INTO app_login JSON ?")
+    @appLogoutStatement = @session.prepare(
+      "INSERT INTO app_logout JSON ?")
+    @pageViewStatement = @session.prepare(
+      "INSERT INTO page_view JSON ?")
     @productPageViewStatement = @session.prepare(
       "INSERT INTO productpage_view JSON ?")
   end
 
-
-  def write(msg)
-    msgParsed = parse(msg)
-    puts msgParsed[:event_name]
-    case msgParsed.delete(:event_name)
-    when 'app.init'
-      @session.execute(@appInitStatement,
-                       arguments: [JSON.generate(msgParsed)])
-    when 'app.login'
-      @session.execute(@appLoginStatement,
-                       arguments: [JSON.generate(msgParsed)])
-    when 'app.logout'
-      @session.execute(@appLogoutStatement,
-                       arguments: [JSON.generate(msgParsed)])
-    when 'page.view'
-      @session.execute(@pageViewStatement,
-                       arguments: [JSON.generate(msgParsed)])
-    when 'productpage.view'
-      @session.execute(@productPageViewStatement,
-                       arguments: [JSON.generate(msgParsed)])
-    end
-
+  # Maps the event names to prepared statements for execution
+  def mapEventsToStatements
+    @eventsMap = {
+      'app.init' => @appInitStatement,
+      'app.login' => @appLoginStatement,
+      'app.logout' => @appLogoutStatement,
+      'page.view' => @pageViewStatement,
+      'productpage.view' => @productPageViewStatement
+    }
   end
 
+  # Write message to cassandra
+  # @param [Hash] msg The message hash
+  def write(msg)
+    msgParsed = parse(msg)
+    stmt = @eventsMap.fetch(msgParsed.delete(:event_name))
+    @session.execute(stmt, arguments: [JSON.generate(msgParsed)])
+  end
+
+  # Parse the message
+  # @param [Hash] msg The message hash
   def parse(msg)
     msg2 = JSON.parse(msg)
     msg = msg2
