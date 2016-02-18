@@ -18,6 +18,8 @@ class CassandraWriter
     @appLoginStatement = @session.prepare("INSERT INTO app_login JSON ?")
     @appLogoutStatement = @session.prepare("INSERT INTO app_logout JSON ?")
     @pageViewStatement = @session.prepare("INSERT INTO page_view JSON ?")
+    @productPageViewStatement = @session.prepare(
+      "INSERT INTO productpage_view JSON ?")
   end
 
 
@@ -26,13 +28,20 @@ class CassandraWriter
     puts msgParsed[:event_name]
     case msgParsed.delete(:event_name)
     when 'app.init'
-      @session.execute(@appInitStatement, arguments: [JSON.generate(msgParsed)])
+      @session.execute(@appInitStatement,
+                       arguments: [JSON.generate(msgParsed)])
     when 'app.login'
-      @session.execute(@appLoginStatement, arguments: [JSON.generate(msgParsed)])
+      @session.execute(@appLoginStatement,
+                       arguments: [JSON.generate(msgParsed)])
     when 'app.logout'
-      @session.execute(@appLogoutStatement, arguments: [JSON.generate(msgParsed)])
+      @session.execute(@appLogoutStatement,
+                       arguments: [JSON.generate(msgParsed)])
     when 'page.view'
-      @session.execute(@pageViewStatement, arguments: [JSON.generate(msgParsed)])
+      @session.execute(@pageViewStatement,
+                       arguments: [JSON.generate(msgParsed)])
+    when 'productpage.view'
+      @session.execute(@productPageViewStatement,
+                       arguments: [JSON.generate(msgParsed)])
     end
 
   end
@@ -54,6 +63,15 @@ class CassandraWriter
         routeUrl: msg['routeUrl'],
         categories: msg['categories'],
         tags: msg['tags']
+      })
+    when 'productpage.view'
+      m.merge!({
+        routeUrl: msg['routeUrl'],
+        categories: msg['categories'],
+        tags: msg['tags'],
+        productId: msg['productId'],
+        productName: msg['productName'],
+        price: msg['price']
       })
     end
     return m
