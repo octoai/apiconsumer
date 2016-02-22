@@ -32,22 +32,27 @@ class CassandraWriter
       "INSERT INTO productpage_view JSON ?"
     )
     @createUserStatement = @session.prepare(
-      "INSERT INTO user_intent (userId, enterpriseId, created_at, updated_at) VALUES (?, ?, ?, ?)"
+      "INSERT INTO user_intent (userId, enterpriseId, created_at, updated_at)
+      VALUES (?, ?, ?, ?)"
     )
     @selectUserStatement = @session.prepare(
-      "SELECT userid, enterpriseid FROM user_intent WHERE userid = ? AND enterpriseid = ?"
+      "SELECT userid, enterpriseid FROM user_intent
+      WHERE userid = ? AND enterpriseid = ?"
     )
     @updateUserIntentStatement = @session.prepare(
-      "UPDATE user_intent SET updated_at = ? WHERE userid = ? AND enterpriseid = ?"
+      "UPDATE user_intent SET updated_at = ?
+      WHERE userid = ? AND enterpriseid = ?"
     )
     @selectProductStatement = @session.prepare(
-      "SELECT enterpriseid, id, name, price FROM products WHERE enterpriseid = ? AND id = ?"
+      "SELECT enterpriseid, id, name, price FROM products
+      WHERE enterpriseid = ? AND id = ?"
     )
     @createProductStatement = @session.prepare(
       "INSERT INTO products JSON ?"
     )
     @updateProductStatement = @session.prepare(
-      "UPDATE products SET price = ?, name = ? WHERE enterpriseid = ? AND id = ?"
+      "UPDATE products SET price = ?, name = ?
+      WHERE enterpriseid = ? AND id = ?"
     )
   end
 
@@ -85,7 +90,8 @@ class CassandraWriter
           end
         elsif s == @createProductStatement
           # check if the product already exists
-          args = [Cassandra::Uuid.new(msgParsed[:enterpriseId]), msgParsed[:productId]]
+          args = [Cassandra::Uuid.new(msgParsed[:enterpriseId]),
+                  msgParsed[:productId]]
           result = @session.execute(@selectProductStatement, arguments: args)
           if result.size == 0
             product_msg = {
@@ -99,7 +105,8 @@ class CassandraWriter
           elsif result.size == 1
             # if already exists, find if name, price changed, update them
             result.each do |r|
-              if (r['name'] != msgParsed[:productName] or r['price'] != msgParsed[:price])
+              if (r['name'] != msgParsed[:productName] or \
+                  r['price'] != msgParsed[:price])
                 args.unshift(msgParsed[:productName].to_s)
                 args.unshift(BigDecimal.new(msgParsed[:price]))
                 @session.execute(@updateProductStatement, arguments: args)
