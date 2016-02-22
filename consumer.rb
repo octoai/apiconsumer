@@ -17,17 +17,29 @@ class CassandraWriter
   # Prepare all possible insert statements
   def prepareStatements
     @appInitStatement = @session.prepare(
-      "INSERT INTO app_init JSON ?")
+      "INSERT INTO app_init JSON ?"
+    )
     @appLoginStatement = @session.prepare(
-      "INSERT INTO app_login JSON ?")
+      "INSERT INTO app_login JSON ?"
+    )
     @appLogoutStatement = @session.prepare(
-      "INSERT INTO app_logout JSON ?")
+      "INSERT INTO app_logout JSON ?"
+    )
     @pageViewStatement = @session.prepare(
-      "INSERT INTO page_view JSON ?")
+      "INSERT INTO page_view JSON ?"
+    )
     @productPageViewStatement = @session.prepare(
-      "INSERT INTO productpage_view JSON ?")
+      "INSERT INTO productpage_view JSON ?"
+    )
     @createUserStatement = @session.prepare(
-      "INSERT INTO user_intent (userId, enterpriseId, created_at) VALUES (?, ?, ?)")
+      "INSERT INTO user_intent (userId, enterpriseId, created_at, updated_at) VALUES (?, ?, ?, ?)"
+    )
+    @selectUserStatement = @session.prepare(
+      "SELECT userid, enterpriseid FROM user_intent WHERE userid = ? AND enterpriseid = ?"
+    )
+    @updateUserIntentStatement = @session.prepare(
+      "UPDATE user_intent SET updated_at = ? WHERE userid = ? AND enterpriseid = ?"
+    )
   end
 
   # Maps the event names to prepared statements for execution
@@ -50,13 +62,30 @@ class CassandraWriter
     if stmt.class == Array
       stmt.each do |s|
         if s == @createUserStatement
-          @session.execute(s, arguments: [ msgParsed[:userId].to_i, Cassandra::Uuid.new(msgParsed[:enterpriseId]), Time.now])
+          # check if the user exists already
+          args = [msgParsed[:userId].to_i,
+                  Cassandra::Uuid.new(msgParsed[:enterpriseId])]
+          result = @session.execute(@selectUserStatement, arguments: args)
+
+          if result.size == 1
+            args.unshift(Time.now)
+            @session.execute(@updateUserIntentStatement, arguments: args)
+          elsif result.size == 0
+            args.concat([Time.now] * 2)
+            @session.execute(s, arguments: args)
+          end
         else
-          @session.execute(s, arguments: [JSON.generate(msgParsed)])
+          args = [JSON.generate(msgParsed)]
+          @session.execute(s, arguments: args)
         end
       end
-    elsif stmt.class == String
-      @session.execute(stmt, arguments: [JSON.generate(msgParsed)])
+    elsif stmt.class == Cassandra::Statements::Prepared
+      begin
+        args = [JSON.generate(msgParsed)]
+        @session.execute(stmt, arguments: args)
+      rescue Exception => e
+        puts e
+      end
     end
   end
 
