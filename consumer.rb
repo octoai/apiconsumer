@@ -40,6 +40,15 @@ class CassandraWriter
     @updateUserIntentStatement = @session.prepare(
       "UPDATE user_intent SET updated_at = ? WHERE userid = ? AND enterpriseid = ?"
     )
+    @selectProductStatement = @session.prepare(
+      "SELECT enterpriseid, id, name, price FROM products WHERE enterpriseid = ? AND id = ?"
+    )
+    @createProductStatement = @session.prepare(
+      "INSERT INTO products JSON ?"
+    )
+    @updateProductStatement = @session.prepare(
+      "UPDATE products SET price = ?, name = ? WHERE enterpriseid = ? AND id = ?"
+    )
   end
 
   # Maps the event names to prepared statements for execution
@@ -49,7 +58,7 @@ class CassandraWriter
       'app.login' => [@appLoginStatement, @createUserStatement],
       'app.logout' => @appLogoutStatement,
       'page.view' => @pageViewStatement,
-      'productpage.view' => @productPageViewStatement
+      'productpage.view' => [@productPageViewStatement, @createProductStatement]
     }
   end
 
@@ -73,6 +82,29 @@ class CassandraWriter
           elsif result.size == 0
             args.concat([Time.now] * 2)
             @session.execute(s, arguments: args)
+          end
+        elsif s == @createProductStatement
+          # check if the product already exists
+          args = [Cassandra::Uuid.new(msgParsed[:enterpriseId]), msgParsed[:productId]]
+          result = @session.execute(@selectProductStatement, arguments: args)
+          if result.size == 0
+            product_msg = {
+              id: msgParsed[:productId].to_i,
+              enterpriseId: Cassandra::Uuid.new(msgParsed[:enterpriseId]),
+              price: msgParsed[:price].to_f,
+              name: msgParsed[:productName]
+            }
+            args = [JSON.generate(product_msg)]
+            @session.execute(@createProductStatement, arguments: args)
+          elsif result.size == 1
+            # if already exists, find if name, price changed, update them
+            result.each do |r|
+              if (r['name'] != msgParsed[:productName] or r['price'] != msgParsed[:price])
+                args.unshift(msgParsed[:productName].to_s)
+                args.unshift(BigDecimal.new(msgParsed[:price]))
+                @session.execute(@updateProductStatement, arguments: args)
+              end
+            end
           end
         else
           args = [JSON.generate(msgParsed)]
