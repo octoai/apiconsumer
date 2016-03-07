@@ -259,11 +259,8 @@ class CassandraWriter
     # check if the product already exists
     args = [eid, pid]
 
-    puts args.to_s
-
     result = @session.execute(@selectProductStatement, arguments: args)
     if result.size == 0
-      puts ">> creating product"
       product_msg = {
         enterpriseId: eid,
         id:           msg[:productId].to_i,
@@ -273,10 +270,8 @@ class CassandraWriter
         tags:         tags
       }
       args = product_msg.values
-      puts args.to_s
       @session.execute(@createProductStatement, arguments: args)
     elsif result.size == 1
-      puts ">> Updating product"
       # if already exists, find if any attribute has changed and update it
       prod = result.first
       argCols = []
@@ -310,8 +305,6 @@ class CassandraWriter
         updatedCols = argCols.map { |x| x.to_s + " = ?" }.join(', ')
         cql = "UPDATE products SET #{ updatedCols } \
         WHERE enterpriseid = ? AND id = ?"
-        puts cql.to_s
-        puts args.rotate(2).map { |x| x.class }.to_s
         begin
           @session.execute(cql, arguments: args.rotate(2))
         rescue Exception => e
@@ -365,12 +358,12 @@ class CassandraWriter
   # Updates user location
   def updateUserLocation(msg)
     eid = Cassandra::Uuid.new(msg[:enterpriseId])
-    uid = msg[:userId]
+    uid = msg[:userId].to_i
     latitude = msg.fetch(:phone, {}).fetch('latitude', nil)
     longitude = msg.fetch(:phone, {}).fetch('longitude', nil)
 
     if latitude != nil and longitude != nil
-      args = [eid, uid, Time.now, latitude, longitude]
+      args = [eid, uid, Time.now, latitude.to_f.round(2), longitude.to_f.round(2)]
       @session.execute(@updateUserLocation, arguments: args)
     end
   end
