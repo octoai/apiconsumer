@@ -40,6 +40,16 @@ class CassandraWriter
       "SELECT userid, enterpriseid FROM user_intent
       WHERE userid = ? AND enterpriseid = ?"
     )
+    @selectUser = @session.prepare(
+      "SELECT userid FROM users \
+      WHERE enterpriseid = ? AND userid = ? \
+      LIMIT 1"
+    )
+    @createUser = @session.prepare(
+      "INSERT INTO users \
+      (enterpriseid, userid, created_at) \
+      VALUES (?, ?, ?)"
+    )
     @updateUserIntentStatement = @session.prepare(
       "UPDATE user_intent SET updated_at = ?
       WHERE userid = ? AND enterpriseid = ?"
@@ -49,7 +59,9 @@ class CassandraWriter
       WHERE enterpriseid = ? AND id = ?"
     )
     @createProductStatement = @session.prepare(
-      "INSERT INTO products JSON ?"
+      "INSERT INTO products \
+      (enterpriseid, id, categories, name, price, tags) \
+      VALUES (?, ?, ?, ?, ?, ?)"
     )
     @updateProductStatement = @session.prepare(
       "UPDATE products SET price = ?, name = ?
@@ -67,18 +79,60 @@ class CassandraWriter
     @updateUserPushToken = @session.prepare(
       "INSERT INTO push_tokens JSON ?"
     )
+    @selectTags = @session.prepare(
+      "SELECT id, tag_text FROM tags WHERE \
+      enterpriseid = ? AND tag_text IN ?"
+    )
+    @addTag = @session.prepare(
+      "INSERT INTO tags \
+      (enterpriseid, tag_text, id, parent, created_at) \
+      VALUES (?, ?, ?, ?, ?)"
+    )
+    @selectCats = @session.prepare(
+      "SELECT id, cat_text FROM categories WHERE \
+      enterpriseid = ? AND cat_text IN ?"
+    )
+    @addCat = @session.prepare(
+      "INSERT INTO categories \
+      (enterpriseid, cat_text, id, parent, created_at) \
+      VALUES (?, ?, ?, ?, ?)"
+    )
+    @selectPage = @session.prepare(
+      "SELECT routeurl FROM pages \
+      WHERE enterpriseid = ? AND routeurl = ?"
+    )
+    @createPage = @session.prepare(
+      "INSERT INTO pages \
+      (enterpriseid, routeurl, categories, created_at, tags) \
+      VALUES (?, ?, ?, ?, ?)"
+    )
+    @updateUserLocation = @session.prepare(
+      "INSERT INTO user_location \
+      (enterpriseid, userid, created_at, latitude, longitude) \
+      VALUES (?, ?, ?, ?, ?)"
+    )
+    @updateUserPhone = @session.prepare(
+      "INSERT INTO user_phone_details \
+      (enterpriseid, userid, deviceid, manufacturer, model, os) \
+      VALUES (?, ?, ?, ?, ?, ?)"
+    )
   end
 
   # Maps the event names to prepared statements for execution
   def mapEventsToStatements
     @eventsMap = {
-      'app.init' => [@appInitStatement, @createUserStatement],
-      'app.login' => [@appLoginStatement, @createUserStatement],
+      'app.init' => @appInitStatement,
+      'app.login' => @appLoginStatement,
       'app.logout' => @appLogoutStatement,
       'page.view' => @pageViewStatement,
-      'productpage.view' => [@productPageViewStatement, @createProductStatement]
+      'productpage.view' => @productPageViewStatement
     }
     @eventsCallbacks = {
+      'app.init' => ['createUserIfNotExists', 'updateUserLocation', 'updateUserPhoneDetails'],
+      'app.login' => ['createUserIfNotExists', 'updateUserLocation', 'updateUserPhoneDetails'],
+      'app.logout' => ['createUserIfNotExists', 'updateUserLocation', 'updateUserPhoneDetails'],
+      'page.view' => ['createUserIfNotExists', 'createOrUpdatePage', 'updateUserLocation', 'updateUserPhoneDetails'],
+      'productpage.view' => ['createUserIfNotExists', 'createOrUpdateProduct', 'updateUserLocation', 'updateUserPhoneDetails'],
       'update.push_token' => ['updateEnterprisePushKey', 'updateUserPushToken']
     }
   end
@@ -116,6 +170,225 @@ class CassandraWriter
     @session.execute(@updateUserPushToken, arguments: args)
   end
 
+  # Create a user if not exists
+  def createUserIfNotExists(msg)
+    eid = Cassandra::Uuid.new(msg[:enterpriseId])
+    args = [eid, msg[:userId].to_i]
+    result = @session.execute(@selectUser, arguments: args)
+    if result.size == 0
+      args.concat([Time.now])
+      @session.execute(@createUser, arguments: args)
+    end
+  end
+
+  # Gets the IDs for the tags specified.
+  def getIdsForTags(eid, tags)
+
+    generator = Cassandra::Uuid::Generator.new
+    res = @session.execute(@selectTags, arguments: [eid, tags])
+    tagids = {}
+
+    # fetch all tag ids from db
+    if res.length > 0
+      res.each do |r|
+        tagids[r['tag_text']] = r['id']
+      end
+    end
+
+    # create tag for new tags
+    if tagids.length < tags.length
+      _tagids = {}
+      newTags = tags - tagids.keys
+      batch = @session.batch
+      newTags.each do |t|
+        tagid = generator.uuid
+        args = [eid, t, tagid, nil, Time.now]
+        batch.add(@addTag, args)
+        _tagids[t] = tagid
+      end
+      @session.execute(batch)
+      tagids.merge(_tagids)
+    end
+
+    tagVals = tagids.values.map { |x| Cassandra::Uuid.new(x.to_s) }
+
+    Set.new(tagVals)
+  end
+
+  def getIdsForCategories(eid, categories)
+    generator = Cassandra::Uuid::Generator.new
+    args = [eid, categories]
+    res = @session.execute(@selectCats, arguments: args)
+    catids = {}
+
+
+    # fetch all categories' ids from db
+    if res.length > 0
+      res.each do |r|
+        catids[r['cat_text']] = r['id']
+      end
+    end
+
+    # create categories table entry for new categories
+    if catids.length != categories.length
+      _catids = {}
+      newCats = categories - catids.keys
+      batch = @session.batch
+      newCats.each do |c|
+        catid = generator.uuid
+        args = [eid, c, catid, nil, Time.now]
+        batch.add(@addCat, args)
+        _catids[c] = catid
+      end
+      @session.execute(batch)
+      catids.merge(_catids)
+    end
+
+    Set.new(catids.values.map {|x| Cassandra::Uuid.new(x.to_s)})
+  end
+
+  # Create or updates product
+  def createOrUpdateProduct(msg)
+
+    eid = Cassandra::Uuid.new(msg[:enterpriseId])
+    pid = msg[:productId].to_i
+
+    categories = getIdsForCategories(eid, msg[:categories])
+    tags = getIdsForTags(eid, msg[:tags])
+
+    # check if the product already exists
+    args = [eid, pid]
+
+    puts args.to_s
+
+    result = @session.execute(@selectProductStatement, arguments: args)
+    if result.size == 0
+      puts ">> creating product"
+      product_msg = {
+        enterpriseId: eid,
+        id:           msg[:productId].to_i,
+        categories:   categories,
+        name:         msg[:productName],
+        price:        msg[:price].to_f.round(2),
+        tags:         tags
+      }
+      args = product_msg.values
+      puts args.to_s
+      @session.execute(@createProductStatement, arguments: args)
+    elsif result.size == 1
+      puts ">> Updating product"
+      # if already exists, find if any attribute has changed and update it
+      prod = result.first
+      argCols = []
+
+      if prod['name'] != msg[:productName]
+        args << msg[:productName]
+        argCols << 'name'
+      end
+
+      # CAUTION: KNOWN BUG
+      # The price is not updated in the products table for some
+      # weird reason where cassandra driver is unable to update
+      # the float values. However, the latest values are always
+      # updated in the productpage_view table
+      if prod['price'].to_f.round(2) != msg[:price].to_f.round(2)
+        args << msg[:price].to_f.round(2)
+        argCols << 'price'
+      end
+
+      if prod['tags'] != tags
+        args << tags
+        argCols << 'tags'
+      end
+
+      if prod['categories'] != categories
+        args << categories
+        argCols << 'categories'
+      end
+
+      if argCols.length > 0
+        updatedCols = argCols.map { |x| x.to_s + " = ?" }.join(', ')
+        cql = "UPDATE products SET #{ updatedCols } \
+        WHERE enterpriseid = ? AND id = ?"
+        puts cql.to_s
+        puts args.rotate(2).map { |x| x.class }.to_s
+        begin
+          @session.execute(cql, arguments: args.rotate(2))
+        rescue Exception => e
+          puts e.inspect
+        end
+      end
+    end
+    pid
+  end
+
+  # Create or update a page
+  def createOrUpdatePage(msg)
+    eid = Cassandra::Uuid.new(msg[:enterpriseId])
+    routeUrl = msg[:routeUrl]
+
+    categories = getIdsForCategories(eid, msg[:categories])
+    tags = getIdsForTags(eid, msg[:tags])
+
+    # check if the product already exists
+    args = [eid, routeUrl]
+
+    result = @session.execute(@selectPage, arguments: args)
+    if result.size == 0
+      args = [eid, routeUrl, categories, Time.now, tags]
+      @session.execute(@createPage, arguments: args)
+    elsif result.size == 1
+      # if already exists, find if any attribute has changed and update it
+      prod = result.first
+      argCols = []
+
+      if prod['tags'] != tags
+        args << tags
+        argCols << 'tags'
+      end
+
+      if prod['categories'] != categories
+        args << categories
+        argCols << 'categories'
+      end
+
+      if argCols.length > 0
+        updatedCols = argCols.map { |x| x.to_s + " = ?" }.join(', ')
+        cql = "UPDATE pages SET #{ updatedCols } \
+        WHERE enterpriseid = ? AND routeUrl = ?"
+        @session.execute(cql, arguments: args.rotate(2))
+      end
+    end
+    routeUrl
+  end
+
+  # Updates user location
+  def updateUserLocation(msg)
+    eid = Cassandra::Uuid.new(msg[:enterpriseId])
+    uid = msg[:userId]
+    latitude = msg.fetch(:phone, {}).fetch('latitude', nil)
+    longitude = msg.fetch(:phone, {}).fetch('longitude', nil)
+
+    if latitude != nil and longitude != nil
+      args = [eid, uid, Time.now, latitude, longitude]
+      @session.execute(@updateUserLocation, arguments: args)
+    end
+  end
+
+  # Update user's phone details
+  def updateUserPhoneDetails(msg)
+    eid = Cassandra::Uuid.new(msg[:enterpriseId])
+    uid = msg[:userId].to_i
+    phone = msg.fetch(:phone, {})
+    deviceId = phone.fetch('deviceId', nil)
+    manufacturer = phone.fetch('manufacturer', nil)
+    model = phone.fetch('model', nil)
+    os = phone.fetch('os', nil)
+
+    args = [eid, uid, deviceId, manufacturer, model, os]
+    @session.execute(@updateUserPhone, arguments: args)
+  end
+
   # Write message to cassandra
   # @param [Hash] msg The message hash
   def write(msg)
@@ -135,54 +408,13 @@ class CassandraWriter
     # Execute the statements later
     stmt = @eventsMap.fetch(eventName, nil)
     if stmt.class == Array
-      stmt.each do |s|
-        if s == @createUserStatement
-          # check if the user exists already
-          args = [msgParsed[:userId].to_i,
-                  Cassandra::Uuid.new(msgParsed[:enterpriseId])]
-          result = @session.execute(@selectUserStatement, arguments: args)
-
-          if result.size == 1
-            args.unshift(Time.now)
-            @session.execute(@updateUserIntentStatement, arguments: args)
-          elsif result.size == 0
-            args.concat([Time.now] * 2)
-            @session.execute(s, arguments: args)
-          end
-        elsif s == @createProductStatement
-          # check if the product already exists
-          args = [Cassandra::Uuid.new(msgParsed[:enterpriseId]),
-                  msgParsed[:productId]]
-          result = @session.execute(@selectProductStatement, arguments: args)
-          if result.size == 0
-            product_msg = {
-              id: msgParsed[:productId].to_i,
-              enterpriseId: Cassandra::Uuid.new(msgParsed[:enterpriseId]),
-              price: msgParsed[:price].to_f,
-              name: msgParsed[:productName],
-              categories: msgParsed[:categories],
-              tags: msgParsed[:tags]
-            }
-            args = [JSON.generate(product_msg)]
-            @session.execute(@createProductStatement, arguments: args)
-          elsif result.size == 1
-            # if already exists, find if name, price changed, update them
-            result.each do |r|
-              if (r['name'] != msgParsed[:productName] or \
-                  r['price'] != msgParsed[:price])
-                args.unshift(msgParsed[:productName].to_s)
-                args.unshift(msgParsed[:price].to_f)
-                @session.execute(@updateProductStatement, arguments: args)
-              end
-            end
-          end
-        else
-          args = [JSON.generate(msgParsed)]
-          @session.execute(s, arguments: args)
-        end
-      end
     elsif stmt.class == Cassandra::Statements::Prepared
       begin
+        msgParsed.delete(:phone)
+        msgParsed.delete(:categories)
+        msgParsed.delete(:tags)
+        msgParsed.delete(:routeUrl)
+        msgParsed.delete(:productName)
         args = [JSON.generate(msgParsed)]
         @session.execute(stmt, arguments: args)
       rescue Exception => e
@@ -208,7 +440,7 @@ class CassandraWriter
     when 'page.view'
       m.merge!({
         routeUrl: msg['routeUrl'],
-        categories: Set(msg['categories']),
+        categories: msg['categories'],
         tags: msg['tags']
       })
     when 'productpage.view'
