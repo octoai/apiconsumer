@@ -116,6 +116,12 @@ class CassandraWriter
       (enterpriseid, userid, deviceid, manufacturer, model, os) \
       VALUES (?, ?, ?, ?, ?, ?)"
     )
+    @addRevTag = @session.prepare(
+      "INSERT INTO tags_rev (id, tag_text) VALUES (?,?)"
+    )
+    @addRevCat = @session.prepare(
+      "INSERT INTO categories_rev (id, cat_text) VALUES (?,?)"
+    )
   end
 
   # Maps the event names to prepared statements for execution
@@ -200,13 +206,19 @@ class CassandraWriter
       _tagids = {}
       newTags = tags - tagids.keys
       batch = @session.batch
+      batch2 = @session.batch
       newTags.each do |t|
         tagid = generator.uuid
         args = [eid, t, tagid, nil, Time.now]
         batch.add(@addTag, args)
         _tagids[t] = tagid
+
+        # create reverse tags entry
+        args = [tagid, t]
+        batch2.add(@addRevTag, args)
       end
       @session.execute(batch)
+      @session.execute(batch2)
       tagids.merge(_tagids)
     end
 
@@ -234,13 +246,19 @@ class CassandraWriter
       _catids = {}
       newCats = categories - catids.keys
       batch = @session.batch
+      batch2 = @session.batch
       newCats.each do |c|
         catid = generator.uuid
         args = [eid, c, catid, nil, Time.now]
         batch.add(@addCat, args)
         _catids[c] = catid
+
+        # add reverse category mapping
+        args = [catid, c]
+        batch2.add(@addRevCat, args)
       end
       @session.execute(batch)
+      @session.execute(batch2)
       catids.merge(_catids)
     end
 
