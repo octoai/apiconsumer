@@ -3,6 +3,8 @@ require 'cassandra'
 require 'json'
 require 'set'
 
+require_relative 'lib/productRecommender'
+
 class CassandraWriter
 
   KEYSPACE = 'octo'
@@ -12,6 +14,7 @@ class CassandraWriter
     @cluster = Cassandra.cluster
     @session = @cluster.connect(KEYSPACE)
     prepareStatements
+    setupObservers
     mapEventsToStatements
   end
 
@@ -138,9 +141,16 @@ class CassandraWriter
       'app.login' => ['createUserIfNotExists', 'updateUserLocation', 'updateUserPhoneDetails'],
       'app.logout' => ['createUserIfNotExists', 'updateUserLocation', 'updateUserPhoneDetails'],
       'page.view' => ['createUserIfNotExists', 'createOrUpdatePage', 'updateUserLocation', 'updateUserPhoneDetails'],
-      'productpage.view' => ['createUserIfNotExists', 'createOrUpdateProduct', 'updateUserLocation', 'updateUserPhoneDetails'],
+      'productpage.view' => ['createUserIfNotExists', 'createOrUpdateProduct',
+                             'updateUserLocation', 'updateUserPhoneDetails',
+                             'productPageViewCallback'
+    ],
       'update.push_token' => ['updateEnterprisePushKey', 'updateUserPushToken']
     }
+  end
+
+  def setupObservers
+    @productRecommenderObserver = ProductRecommender::Observer.new
   end
 
   # Updates the Push Key for the enterprise
@@ -289,6 +299,7 @@ class CassandraWriter
       }
       args = product_msg.values
       @session.execute(@createProductStatement, arguments: args)
+      addProductsCallback(msg)
     elsif result.size == 1
       # if already exists, find if any attribute has changed and update it
       prod = result.first
@@ -371,6 +382,35 @@ class CassandraWriter
       end
     end
     routeUrl
+  end
+
+  # Callbacks to be executed on product pageview happening
+  def productPageViewCallback(msg)
+    eid, uid, pid = msg.values_at(:enterpriseId, :userId, :productId)
+
+    # Currently there is only one callback.
+    # More can be added here as the need be
+    @productRecommenderObserver.registerUserProductView(eid, uid, pid)
+  end
+
+  # Callbacks to be executed on new product being added
+  def addProductsCallback(msg)
+
+    # Register this product with the tags
+    unless msg[:tags].empty?
+      msg[:tags].each do |tag_text|
+        @productRecommenderObserver.registerProductForTag(eid, tag_text, pid)
+      end
+    end
+
+    # Register this product with the categories
+    unless msg[:categories].nil?
+      msg[:categories].each do |cat_text|
+        @productRecommenderObserver.registerProductForCategory(eid, cat_text,
+                                                                pid)
+      end
+    end
+
   end
 
   # Updates user location
