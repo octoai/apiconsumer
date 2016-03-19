@@ -2,8 +2,7 @@ require 'kafka-consumer'
 require 'cassandra'
 require 'json'
 require 'set'
-
-require_relative 'lib/productRecommender'
+require 'productRecommender'
 
 class CassandraWriter
 

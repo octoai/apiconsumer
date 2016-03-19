@@ -13,9 +13,7 @@ GEM
       thor (~> 0.19.1)
       zookeeper (~> 1.4)
     poseidon (0.0.5)
-    predictor (2.3.1)
-      redis (>= 3.0.0)
-    redis (3.2.2)
+    productrecommender (0.0.1)
     thor (0.19.1)
     zookeeper (1.4.11)
 
@@ -27,4 +25,4 @@ DEPENDENCIES
   dotenv
   json
   kafka-consumer
-  predictor
+  productrecommender
