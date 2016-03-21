@@ -394,7 +394,8 @@ class CassandraWriter
 
   # Callbacks to be executed on new product being added
   def addProductsCallback(msg)
-
+    eid = Cassandra::Uuid.new(msg[:enterpriseId])
+    pid = msg[:productId]
     # Register this product with the tags
     unless msg[:tags].empty?
       msg[:tags].each do |tag_text|
