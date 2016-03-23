@@ -19,21 +19,45 @@ class CassandraWriter
 
   # Prepare all possible insert statements
   def prepareStatements
+
     @appInitStatement = @session.prepare(
-      "INSERT INTO app_init JSON ?"
+      'INSERT INTO app_init (id, enterpriseId, userId, created_at) VALUES (?, ?, ?, ?)'
     )
     @appLoginStatement = @session.prepare(
-      "INSERT INTO app_login JSON ?"
+      'INSERT INTO app_login (id, enterpriseId, userId, created_at) VALUES (?, ?, ?, ?)'
     )
     @appLogoutStatement = @session.prepare(
-      "INSERT INTO app_logout JSON ?"
+      'INSERT INTO app_logout (id, enterpriseId, userId, created_at) VALUES (?, ?, ?, ?)'
     )
     @pageViewStatement = @session.prepare(
-      "INSERT INTO page_view JSON ?"
+      'INSERT INTO page_view (id, enterpriseId, userId, created_at) VALUES (?, ?, ?, ?)'
     )
     @productPageViewStatement = @session.prepare(
-      "INSERT INTO productpage_view JSON ?"
+      'INSERT INTO productpage_view (id, enterpriseId, userId, created_at, productId, price) VALUES (?, ?, ?, ?, ?, ?)'
     )
+    @updateUserPushToken = @session.prepare(
+      'INSERT INTO push_tokens (enterpriseid, userid, pushtype, pushtoken, updated_at) VALUES (?, ?, ?, ?, ?)'
+    )
+
+    # @appInitStatement = @session.prepare(
+    #   "INSERT INTO app_init JSON ?"
+    # )
+    # @appLoginStatement = @session.prepare(
+    #   "INSERT INTO app_login JSON ?"
+    # )
+    # @appLogoutStatement = @session.prepare(
+    #   "INSERT INTO app_logout JSON ?"
+    # )
+    # @pageViewStatement = @session.prepare(
+    #   "INSERT INTO page_view JSON ?"
+    # )
+    # @productPageViewStatement = @session.prepare(
+    #   "INSERT INTO productpage_view JSON ?"
+    # )
+    # @updateUserPushToken = @session.prepare(
+    #   "INSERT INTO push_tokens JSON ?"
+    # )
+    
     @createUserStatement = @session.prepare(
       "INSERT INTO user_intent (userId, enterpriseId, created_at, updated_at)
       VALUES (?, ?, ?, ?)"
@@ -77,9 +101,6 @@ class CassandraWriter
     @selectPushKey = @session.prepare(
       "SELECT pushkey FROM push_keys WHERE \
       enterpriseid = ? AND pushtype = ?"
-    )
-    @updateUserPushToken = @session.prepare(
-      "INSERT INTO push_tokens JSON ?"
     )
     @selectTags = @session.prepare(
       "SELECT id, tag_text FROM tags WHERE \
@@ -176,12 +197,7 @@ class CassandraWriter
   # Update the user push token
   def updateUserPushToken(msg)
     eid = Cassandra::Uuid.new(msg[:enterpriseId])
-    args = [JSON.generate({
-      enterpriseid: eid,
-      userid: msg[:userId],
-      pushtype: msg[:pushType],
-      pushtoken: msg[:pushToken]
-    })]
+    args = [ eid, msg[:userId].to_i, msg[:pushType], msg[:pushToken]]
     @session.execute(@updateUserPushToken, arguments: args)
   end
 
@@ -466,8 +482,39 @@ class CassandraWriter
         msgParsed.delete(:tags)
         msgParsed.delete(:routeUrl)
         msgParsed.delete(:productName)
-        args = [JSON.generate(msgParsed)]
-        @session.execute(stmt, arguments: args)
+        
+        # args = [JSON.generate(msgParsed)]
+        # @session.execute(stmt, arguments: args)
+        
+        eid = Cassandra::Uuid.new(msg[:enterpriseId])
+        uid = msg[:userId].to_i
+
+        case eventName
+        when 'app.init'
+          id = Cassandra::Uuid.new(msg[:id])
+          args = [id, eid, uid, msg[:created_at]]
+          @session.execute(stmt, arguments: args)
+        when 'app.login'
+          id = Cassandra::Uuid.new(msg[:id])
+          args = [id, eid, uid, msg[:created_at]]
+          @session.execute(stmt, arguments: args)
+        when 'app.logout'
+          id = Cassandra::Uuid.new(msg[:id])
+          args = [id, eid, uid, msg[:created_at]]
+          @session.execute(stmt, arguments: args)
+        when 'page.view'
+          id = Cassandra::Uuid.new(msg[:id])
+          args = [id, eid, uid, msg[:created_at]]
+          @session.execute(stmt, arguments: args)
+        when 'productpage.view'
+          id = Cassandra::Uuid.new(msg[:id])
+          args = [id, eid, uid, msg[:created_at], msg[:productId].to_i, msg[:price].to_f.round(2)]
+          @session.execute(stmt, arguments: args)
+        when 'update.push_token'
+          args = [eid, uid, msg[:pushType], msg[:pushKey], Time.now]
+          @session.execute(stmt, arguments: args)
+        end
+
       rescue Exception => e
         puts e
       end
