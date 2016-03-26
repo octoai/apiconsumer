@@ -536,9 +536,6 @@ class EventsConsumer
   end
 
   def startConsuming
-#    cw = CassandraWriter.new
-#      cw.write(message.value)
-
     octoConsumer = Octo::Consumer.new
     @consumer.each do |message|
       octoConsumer.handle(message.value)

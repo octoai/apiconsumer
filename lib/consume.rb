@@ -4,7 +4,7 @@ require 'json'
 module Octo
   class Consumer
 
-    VALID_EVENTS = %w(app.init )
+    VALID_EVENTS = %w(app.init app.login app.logout page.view)
 
     def initialize()
 
@@ -18,7 +18,27 @@ module Octo
         enterprise = checkEnterprise(msg)
         case eventName
         when 'app.init'
-          checkUser(enterprise, msg)
+          user = checkUser(enterprise, msg)
+          Octo::AppInit.new(enterprise: enterprise,
+                            created_at: Time.now,
+                            userid: user.id).save!
+          updateLocationHistory(user, msg)
+          updateUserPhoneDetails(user, msg)
+        when 'app.login'
+          user = checkUser(enterprise, msg)
+          Octo::AppLogin.new(enterprise: enterprise,
+                             created_at: Time.now,
+                             userid: user.id).save!
+          updateLocationHistory(user, msg)
+          updateUserPhoneDetails(user, msg)
+        when 'app.logout'
+          user = checkUser(enterprise, msg)
+          Octo::AppLogout.new(enterprise: enterprise,
+                              created_at: Time.now,
+                              userid: user.id).save!
+          updateLocationHistory(user, msg)
+          updateUserPhoneDetails(user, msg)
+        when 'page.view'
         end
       end
     end
@@ -33,10 +53,9 @@ module Octo
     def checkEnterprise(msg)
       res = Octo::Enterprise.get_cached(id: msg[:enterpriseId])
       unless res
-        res = Octo::Enterprise.new(
-              id: msg[:enterpriseId],
-              name: msg[:enterpriseName]
-            ).save!
+        res = Octo::Enterprise.new(id: msg[:enterpriseId],
+                                   name: msg[:enterpriseName]
+                                  ).save!
       end
       res
     end
@@ -50,6 +69,29 @@ module Octo
           id: msg[:userId]).save!
       end
       res
+    end
+
+    def updateLocationHistory(user, msg)
+      Octo::UserLocationHistory.new(
+        user: user,
+        latitude: msg[:phone].fetch('latitude', 0.0),
+        longitude: msg[:phone].fetch('longitude', 0.0),
+        created_at: Time.now
+      ).save!
+    end
+
+    def updateUserPhoneDetails(user, msg)
+      res = Octo::UserPhoneDetails.get_cached(user_id: user.id, user_enterprise_id: user.enterprise.id)
+      unless res
+        res = Octo::UserPhoneDetails.new(user_enterprise_id: user.enterprise.id,
+                                         user_id: user.id,
+                                         deviceid: msg[:phone].fetch('deviceId', ''),
+                                         manufacturer: msg[:phone].fetch('manufacturer', ''),
+                                         model: msg[:phone].fetch('model', ''),
+                                         os: msg[:phone].fetch('os', '')).save!
+      else
+
+      end
     end
 
     def parse(msg)
