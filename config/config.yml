@@ -1,0 +1,9 @@
+name: octo_development
+host: '127.0.0.1'
+port: 9042
+keyspace: octo_development
+max_retries: 3
+retry_delay: 0.5
+replication:
+  class: SimpleStrategy
+  replication_factor: 1

@@ -3,6 +3,9 @@ require 'cassandra'
 require 'json'
 require 'set'
 require 'productRecommender'
+require 'octocore'
+
+require_relative 'lib/consume'
 
 class CassandraWriter
 
@@ -528,12 +531,17 @@ class EventsConsumer
                                     zookeeper: ZOOKEEPER,
                                     logger: nil)
     Signal.trap("INT") { @consumer.interrupt }
+
+    Octo.connect_with_config_file(File.join(Dir.pwd, 'config', 'config.yml'))
   end
 
   def startConsuming
-    cw = CassandraWriter.new
+#    cw = CassandraWriter.new
+#      cw.write(message.value)
+
+    octoConsumer = Octo::Consumer.new
     @consumer.each do |message|
-      cw.write(message.value)
+      octoConsumer.handle(message.value)
     end
   end
 
