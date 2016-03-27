@@ -1,5 +1,5 @@
-require 'octocore'
 require 'json'
+require 'set'
 
 module Octo
   class Consumer
@@ -177,7 +177,7 @@ module Octo
         tags: Set.new(msg[:tags]),
         price: msg[:price].to_f,
         name: msg[:productName],
-        routeUrl: msg[:routeUrl]
+        routeurl: msg[:routeUrl]
       }
       Octo::Product.findOrCreateOrUpdate(args, opts)
     end
