@@ -22,7 +22,7 @@ class EventsConsumer
   end
 
   def startConsuming
-    octoConsumer = Octo::Consumer.new
+    octoConsumer = Octo::Consumer::EventsConsumer.new
     @consumer.each do |message|
       octoConsumer.handle(message.value)
     end
