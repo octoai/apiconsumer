@@ -16,22 +16,22 @@ module Octo
 
       class << self
 
-        def update_counters(obj)
-          if obj[:product]
-            Octo::ProductHit.increment_for(obj[:product])
+        def update_counters(opts)
+          if opts.has_key?(:product)
+            Octo::ProductHit.increment_for(opts[:product])
           end
-          if obj[:categories]
-            obj[:categories].each do |cat|
-              Octo::CategoryHit.increment_for cat
+          if opts.has_key?(:categories)
+            opts[:categories].each do |cat|
+              Octo::CategoryHit.increment_for(cat)
             end
           end
-          if obj[:tags]
-            obj[:tags].each do |tag|
-              Octo::TagHit.increment_for tag
+          if opts.has_key?(:tags)
+            opts[:tags].each do |tag|
+              Octo::TagHit.increment_for(tag)
             end
           end
-          if obj[:event]
-            Octo::EventHit.increment_for(obj[:event])
+          if opts.has_key?(:event)
+            Octo::ApiHit.increment_for(opts[:event])
           end
         end
 

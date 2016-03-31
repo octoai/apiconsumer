@@ -10,7 +10,8 @@ module Octo
 
       include Hooks
 
-      VALID_EVENTS = %w(app.init app.login app.logout page.view productpage.view update.push_token)
+      VALID_EVENTS = %w(app.init app.login app.logout
+page.view productpage.view update.push_token)
 
       def initialize()
 
@@ -58,8 +59,10 @@ module Octo
             product, categories, tags = checkProduct(enterprise, msg)
             updateLocationHistory(user, msg)
             updateUserPhoneDetails(user, msg)
-            call_hooks(eventName, {product: product, categories: categories, tags: tags})
-            call_hooks(eventName, {event: product})
+            call_hooks(eventName, {product: product,
+                                   categories: categories,
+                                   tags: tags,
+                                   event: product})
           when 'update.push_token'
             user = checkUser(enterprise, msg)
             checkPushToken(enterprise, user, msg)
