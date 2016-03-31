@@ -30,35 +30,36 @@ module Octo
                               userid: user.id).save!
             updateLocationHistory(user, msg)
             updateUserPhoneDetails(user, msg)
-            call_hooks(eventName, event)
+            call_hooks(eventName, {:event => event})
           when 'app.login'
             user = checkUser(enterprise, msg)
-            Octo::AppLogin.new(enterprise: enterprise,
+            event = Octo::AppLogin.new(enterprise: enterprise,
                                created_at: Time.now,
                                userid: user.id).save!
             updateLocationHistory(user, msg)
             updateUserPhoneDetails(user, msg)
-            call_hooks(eventName, event)
+            call_hooks(eventName, {:event => event})
           when 'app.logout'
             user = checkUser(enterprise, msg)
-            Octo::AppLogout.new(enterprise: enterprise,
+            event = Octo::AppLogout.new(enterprise: enterprise,
                                 created_at: Time.now,
                                 userid: user.id).save!
             updateLocationHistory(user, msg)
             updateUserPhoneDetails(user, msg)
-            call_hooks(eventName, event)
+            call_hooks(eventName, {:event => event})
           when 'page.view'
             user = checkUser(enterprise, msg)
             page, categories, tags = checkPage(enterprise, msg)
             updateLocationHistory(user, msg)
             updateUserPhoneDetails(user, msg)
-            call_hooks(eventName, page)
+            call_hooks(eventName, {:event => page})
           when 'productpage.view'
             user = checkUser(enterprise, msg)
             product, categories, tags = checkProduct(enterprise, msg)
             updateLocationHistory(user, msg)
             updateUserPhoneDetails(user, msg)
-            call_hooks(eventName, product, categories, tags)
+            call_hooks(eventName, {:product => product, :categories => categories, :tags => tags})
+            call_hooks(eventName, {:event => product})
           when 'update.push_token'
             user = checkUser(enterprise, msg)
             checkPushToken(enterprise, user, msg)
