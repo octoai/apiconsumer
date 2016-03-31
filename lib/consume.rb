@@ -25,11 +25,12 @@ module Octo
           case eventName
           when 'app.init'
             user = checkUser(enterprise, msg)
-            Octo::AppInit.new(enterprise: enterprise,
+            event = Octo::AppInit.new(enterprise: enterprise,
                               created_at: Time.now,
                               userid: user.id).save!
             updateLocationHistory(user, msg)
             updateUserPhoneDetails(user, msg)
+            call_hooks(eventName, event)
           when 'app.login'
             user = checkUser(enterprise, msg)
             Octo::AppLogin.new(enterprise: enterprise,
@@ -37,6 +38,7 @@ module Octo
                                userid: user.id).save!
             updateLocationHistory(user, msg)
             updateUserPhoneDetails(user, msg)
+            call_hooks(eventName, event)
           when 'app.logout'
             user = checkUser(enterprise, msg)
             Octo::AppLogout.new(enterprise: enterprise,
@@ -44,11 +46,13 @@ module Octo
                                 userid: user.id).save!
             updateLocationHistory(user, msg)
             updateUserPhoneDetails(user, msg)
+            call_hooks(eventName, event)
           when 'page.view'
             user = checkUser(enterprise, msg)
-            checkPage(enterprise, msg)
+            page, categories, tags = checkPage(enterprise, msg)
             updateLocationHistory(user, msg)
             updateUserPhoneDetails(user, msg)
+            call_hooks(eventName, page)
           when 'productpage.view'
             user = checkUser(enterprise, msg)
             product, categories, tags = checkProduct(enterprise, msg)
