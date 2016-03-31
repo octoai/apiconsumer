@@ -28,7 +28,8 @@ page.view productpage.view update.push_token)
             user = checkUser(enterprise, msg)
             event = Octo::AppInit.new(enterprise: enterprise,
                               created_at: Time.now,
-                              userid: user.id).save!
+                              userid: user.id,
+                              customid: msg[:uuid]).save!
             updateLocationHistory(user, msg)
             updateUserPhoneDetails(user, msg)
             call_hooks(eventName, {event: event})
@@ -36,7 +37,8 @@ page.view productpage.view update.push_token)
             user = checkUser(enterprise, msg)
             event = Octo::AppLogin.new(enterprise: enterprise,
                                created_at: Time.now,
-                               userid: user.id).save!
+                               userid: user.id,
+                              customid: msg[:uuid]).save!
             updateLocationHistory(user, msg)
             updateUserPhoneDetails(user, msg)
             call_hooks(eventName, {event: event})
@@ -44,7 +46,8 @@ page.view productpage.view update.push_token)
             user = checkUser(enterprise, msg)
             event = Octo::AppLogout.new(enterprise: enterprise,
                                 created_at: Time.now,
-                                userid: user.id).save!
+                                userid: user.id,
+                              customid: msg[:uuid]).save!
             updateLocationHistory(user, msg)
             updateUserPhoneDetails(user, msg)
             call_hooks(eventName, {event: event})
@@ -177,7 +180,8 @@ page.view productpage.view update.push_token)
         }
         opts = {
           categories: Set.new(msg[:categories]),
-          tags: Set.new(msg[:tags])
+          tags: Set.new(msg[:tags],
+          customid: msg[:uuid])
         }
         page = Octo::Page.findOrCreateOrUpdate(args, opts)
         [page, cats, tags]
@@ -202,7 +206,8 @@ page.view productpage.view update.push_token)
           tags: Set.new(msg[:tags]),
           price: msg[:price].to_f,
           name: msg[:productName],
-          routeurl: msg[:routeUrl]
+          routeurl: msg[:routeUrl],
+          customid: msg[:uuid]
         }
         prod = Octo::Product.findOrCreateOrUpdate(args, opts)
         [prod, categories, tags]
