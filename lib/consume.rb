@@ -10,8 +10,14 @@ module Octo
 
       include Hooks
 
+      # These are all the events which are allowed for an enterprise
       VALID_EVENTS = %w(app.init app.login app.logout
 page.view productpage.view update.push_token)
+
+      # These events are a sub set of above events.
+      # The client is charged on these events and hence their
+      # counter needs to be maintained
+      API_EVENTS = %w(app.init app.login app.logout page.view productpage.view)
 
       def initialize()
 
@@ -23,25 +29,32 @@ page.view productpage.view update.push_token)
 
         if VALID_EVENTS.include?eventName
           enterprise = checkEnterprise(msg)
+
+          hook_opts = {}
+
+          if API_EVENTS.include?eventName
+            hook_opts[:event] = register_api_event(enterprise, eventName)
+          end
+
           case eventName
-          when 'app.init'
+            when 'app.init'
             user = checkUser(enterprise, msg)
-            event = Octo::AppInit.new(enterprise: enterprise,
+            Octo::AppInit.new(enterprise: enterprise,
                               created_at: Time.now,
                               userid: user.id,
                               customid: msg[:uuid]).save!
             updateLocationHistory(user, msg)
             updateUserPhoneDetails(user, msg)
-            call_hooks(eventName, {event: event})
+            call_hooks(eventName, hook_opts)
           when 'app.login'
             user = checkUser(enterprise, msg)
-            event = Octo::AppLogin.new(enterprise: enterprise,
+            Octo::AppLogin.new(enterprise: enterprise,
                                created_at: Time.now,
                                userid: user.id,
                               customid: msg[:uuid]).save!
             updateLocationHistory(user, msg)
             updateUserPhoneDetails(user, msg)
-            call_hooks(eventName, {event: event})
+            call_hooks(eventName, hook_opts)
           when 'app.logout'
             user = checkUser(enterprise, msg)
             event = Octo::AppLogout.new(enterprise: enterprise,
@@ -50,22 +63,23 @@ page.view productpage.view update.push_token)
                               customid: msg[:uuid]).save!
             updateLocationHistory(user, msg)
             updateUserPhoneDetails(user, msg)
-            call_hooks(eventName, {event: event})
+            call_hooks(eventName, hook_opts)
           when 'page.view'
             user = checkUser(enterprise, msg)
-            page, categories, tags = checkPage(enterprise, msg)
+            checkPage(enterprise, msg)
             updateLocationHistory(user, msg)
             updateUserPhoneDetails(user, msg)
-            call_hooks(eventName, {event: page})
+            call_hooks(eventName, hook_opts)
           when 'productpage.view'
             user = checkUser(enterprise, msg)
             product, categories, tags = checkProduct(enterprise, msg)
             updateLocationHistory(user, msg)
             updateUserPhoneDetails(user, msg)
-            call_hooks(eventName, {product: product,
-                                   categories: categories,
-                                   tags: tags,
-                                   event: product})
+            hook_opts.merge!({
+                product: product,
+                categories: categories,
+                tags: tags })
+            call_hooks(eventName, hook_opts)
           when 'update.push_token'
             user = checkUser(enterprise, msg)
             checkPushToken(enterprise, user, msg)
@@ -75,6 +89,11 @@ page.view productpage.view update.push_token)
       end
 
       private
+
+      def register_api_event(enterprise, event_name)
+        Octo::ApiEvent.findOrCreate({ enterprise_id: enterprise.id,
+                                    eventname: event_name})
+      end
 
       def call_hooks(event, *args)
         hook = [:after, event.gsub('.', '_')].join('_').to_sym
