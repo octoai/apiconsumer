@@ -200,7 +200,7 @@ page.view productpage.view update.push_token)
         opts = {
           categories: Set.new(msg[:categories]),
           tags: Set.new(msg[:tags]),
-          customid: Set.new(msg[:uuid])
+          customid: msg[:uuid]
         }
         page = Octo::Page.findOrCreateOrUpdate(args, opts)
         [page, cats, tags]
