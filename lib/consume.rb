@@ -29,8 +29,12 @@ page.view productpage.view update.push_token)
 
         if VALID_EVENTS.include?eventName
           enterprise = checkEnterprise(msg)
+          user = checkUser(enterprise, msg)
 
-          hook_opts = {}
+          hook_opts = {
+              enterprise: enterprise,
+              user: user
+          }
 
           if API_EVENTS.include?eventName
             hook_opts[:event] = register_api_event(enterprise, eventName)
@@ -38,7 +42,6 @@ page.view productpage.view update.push_token)
 
           case eventName
             when 'app.init'
-            user = checkUser(enterprise, msg)
             Octo::AppInit.new(enterprise: enterprise,
                               created_at: Time.now,
                               userid: user.id,
@@ -47,7 +50,6 @@ page.view productpage.view update.push_token)
             updateUserPhoneDetails(user, msg)
             call_hooks(eventName, hook_opts)
           when 'app.login'
-            user = checkUser(enterprise, msg)
             Octo::AppLogin.new(enterprise: enterprise,
                                created_at: Time.now,
                                userid: user.id,
@@ -56,7 +58,6 @@ page.view productpage.view update.push_token)
             updateUserPhoneDetails(user, msg)
             call_hooks(eventName, hook_opts)
           when 'app.logout'
-            user = checkUser(enterprise, msg)
             event = Octo::AppLogout.new(enterprise: enterprise,
                                 created_at: Time.now,
                                 userid: user.id,
@@ -65,13 +66,11 @@ page.view productpage.view update.push_token)
             updateUserPhoneDetails(user, msg)
             call_hooks(eventName, hook_opts)
           when 'page.view'
-            user = checkUser(enterprise, msg)
             checkPage(enterprise, msg)
             updateLocationHistory(user, msg)
             updateUserPhoneDetails(user, msg)
             call_hooks(eventName, hook_opts)
           when 'productpage.view'
-            user = checkUser(enterprise, msg)
             product, categories, tags = checkProduct(enterprise, msg)
             updateLocationHistory(user, msg)
             updateUserPhoneDetails(user, msg)
@@ -81,7 +80,6 @@ page.view productpage.view update.push_token)
                 tags: tags })
             call_hooks(eventName, hook_opts)
           when 'update.push_token'
-            user = checkUser(enterprise, msg)
             checkPushToken(enterprise, user, msg)
             checkPushKey(enterprise, msg)
           end

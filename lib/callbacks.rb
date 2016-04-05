@@ -1,4 +1,5 @@
 require 'octocore'
+require 'octorecommender'
 require 'hooks'
 
 module Octo
@@ -13,9 +14,13 @@ module Octo
       after_app_logout :update_counters
       after_page_view :update_counters
       after_productpage_view :update_counters
+      after_productpage_view :update_recommenders
 
       class << self
 
+        # Updates the counters of various types depending
+        #   on the event.
+        # @param [Hash] opts The options hash
         def update_counters(opts)
           if opts.has_key?(:product)
             Octo::ProductHit.increment_for(opts[:product])
@@ -32,6 +37,19 @@ module Octo
           end
           if opts.has_key?(:event)
             Octo::ApiHit.increment_for(opts[:event])
+          end
+        end
+
+        # Updates for recommendations
+        # @param [Hash] opts The options hash
+        def update_recommenders(opts)
+          user = opts[:user]
+          product = opts[:product]
+
+          if user and product
+            recommender = Octo::Recommender.new
+            recommender.register_user_product_view(user, product)
+            recommender.register_user_action_time(user, Time.now.floor)
           end
         end
 
