@@ -256,8 +256,8 @@ page.view productpage.view update.push_token)
         msg = msg2
         m = {
           id:             msg['uuid'],
-          enterpriseId:   msg['enterprise']['id'],
-          enterpriseName: msg['enterprise']['customId'],
+          enterpriseId:   msg['enterprise']['customId'],
+          enterpriseName: msg['enterprise']['userName'],
           event_name:     msg['event_name'],
           phone:          msg.fetch('phoneDetails', {}),
           userId:         msg.fetch('userId', -1),

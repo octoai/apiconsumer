@@ -1,13 +1,15 @@
 require 'kafka-consumer'
-
+require 'dotenv'
 require 'octocore'
 require 'productRecommender'
 
 require_relative 'lib/consume'
 
+Dotenv.load
+
 class EventsConsumer
 
-  ZOOKEEPER = '127.0.0.1:2181'
+  ZOOKEEPER = ENV['ZOOKEEPER']
   CLIENT_ID = 'eventsConsumer'
   TOPICS    = ['events']
 
@@ -16,7 +18,7 @@ class EventsConsumer
                                     TOPICS,
                                     zookeeper: ZOOKEEPER,
                                     logger: nil)
-    Signal.trap("INT") { @consumer.interrupt }
+    Signal.trap('INT') { @consumer.interrupt }
 
     Octo.connect_with_config_file(File.join(Dir.pwd, 'config', 'config.yml'))
   end
