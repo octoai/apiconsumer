@@ -9,13 +9,37 @@ Consumes the events beacon calls from kafka queue and stores into cassandra.
 
 ## Running ##
 
-- Run `ruby consumer.rb > /tmp/consumer.log`
-- View the logfile at `/tmp/consumer.log`
-- Close by `CTRL + c`
+It uses `god` [http://godrb.com](http://godrb.com) for monitoring process.
 
-Would be daemonised
+### Start
+
+```
+lang=bash
+god -c apihandler.god
+```
+
+### Get Status
+
+```
+lang=bash
+god status apiconsumer
+```
+
+### Stop
+
+```
+lang=bash
+god stop apiconsumer
+```
+
+
 
 ## Troubleshooting ##
+
+### Logs
+
+- Available at `CURR_DIR/shared/logs/`.
+- Also check the `logfile` config at `config/config.yml`.
 
 ### consumer/partition_consumer.rb error ###
 
@@ -31,3 +55,7 @@ If you get error like
 ```
 
 Just restart your kafka server.
+
+### In case of most kafka fuckups
+
+- restart kafka

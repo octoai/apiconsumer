@@ -1,32 +1,31 @@
 require 'kafka-consumer'
 require 'dotenv'
 require 'octocore'
-require 'productRecommender'
-
-require_relative 'lib/consume'
+require 'octorecommender'
 
 Dotenv.load
 
 class EventsConsumer
+  include Octo::Helpers::ApiConsumerHelper
 
   ZOOKEEPER = ENV['ZOOKEEPER']
-  CLIENT_ID = 'eventsConsumer'
-  TOPICS    = ['events']
 
   def initialize
-    @consumer = Kafka::Consumer.new(CLIENT_ID,
-                                    TOPICS,
-                                    zookeeper: ZOOKEEPER,
-                                    logger: nil)
-    Signal.trap('INT') { @consumer.interrupt }
-
     Octo.connect_with_config_file(File.join(Dir.pwd, 'config', 'config.yml'))
+    @consumer = Kafka::Consumer.new(Octo.get_config(:client_id, 'apiconsumer'),
+                                    Octo.get_config(:kafka).fetch(:topic),
+                                    zookeeper: ZOOKEEPER,
+                                    logger: Octo.logger)
+    Signal.trap('INT') { @consumer.interrupt }
   end
 
   def startConsuming
-    octoConsumer = Octo::Consumer::EventsConsumer.new
     @consumer.each do |message|
-      octoConsumer.handle(message.value)
+      begin
+        handle(message.value)
+      rescue Exception => e
+        Octo.logger.error(e)
+      end
     end
   end
 
