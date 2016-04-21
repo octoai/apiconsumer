@@ -8,3 +8,5 @@ gem 'octocore'
 gem 'hooks'
 gem 'god'
 gem 'octorecommender'
+gem 'daemons'
+

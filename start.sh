@@ -1,1 +1,0 @@
-ruby consumer.rb > /tmp/consumer.log
