@@ -9,4 +9,4 @@ gem 'hooks'
 gem 'god'
 gem 'octorecommender'
 gem 'daemons'
-
+gem 'octonotification'

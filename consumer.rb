@@ -3,6 +3,7 @@ require 'dotenv'
 require 'octocore'
 require 'octorecommender'
 require 'daemons'
+require 'octonotification'
 
 Dotenv.load
 
