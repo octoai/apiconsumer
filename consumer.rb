@@ -14,9 +14,9 @@ class EventsConsumer
 
   def initialize(config_file=nil)
     if config_file.nil?
-      config_file = File.join(File.expand_path(File.dirname(__FILE__)), 'config', 'config.yml')
+      config_file = File.join(File.expand_path(File.dirname(__FILE__)), 'config')
     end
-    Octo.connect_with_config_file config_file
+    Octo.connect_with config_file
     @consumer = Kafka::Consumer.new(Octo.get_config(:client_id, 'apiconsumer' + rand(100).to_s),
                                     Octo.get_config(:kafka).fetch(:topic),
                                     zookeeper: ZOOKEEPER,
@@ -55,7 +55,7 @@ if __FILE__ == $0
     multiple: true
   }
 
-  config_file = File.join(curr_dir, 'config', 'config.yml')
+  config_file = File.join(curr_dir, 'config')
 
   Daemons.run_proc('api_consumer', opts) do
     main(config_file)

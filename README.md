@@ -5,6 +5,7 @@ Consumes the events beacon calls from kafka queue and stores into cassandra.
 ## Setup ##
 
 - Clone the repo
+- `git submodule init`
 - Perform `bundle install`
 
 ### Start
