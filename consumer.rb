@@ -19,7 +19,7 @@ class EventsConsumer
     Octo.connect_with config_file
     @consumer = Kafka::Consumer.new(Octo.get_config(:client_id, 'apiconsumer' + rand(100).to_s),
                                     Octo.get_config(:kafka).fetch(:topic),
-                                    zookeeper: ZOOKEEPER,
+                                    zookeeper: Octo.get_config(:zookeeper, ZOOKEEPER),
                                     logger: Octo.logger)
     Signal.trap('INT') { @consumer.interrupt }
   end
