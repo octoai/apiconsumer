@@ -17,7 +17,7 @@ class EventsConsumer
       config_file = File.join(File.expand_path(File.dirname(__FILE__)), 'config')
     end
     Octo.connect_with config_file
-    @consumer = Kafka::Consumer.new(Octo.get_config(:client_id, 'apiconsumer' + rand(100).to_s),
+    @consumer = Kafka::Consumer.new(Octo.get_config(:kafka).fetch(:client_id, 'apiconsumer' + rand(100).to_s),
                                     Octo.get_config(:kafka).fetch(:topic),
                                     zookeeper: Octo.get_config(:zookeeper, ZOOKEEPER),
                                     logger: Octo.logger)
