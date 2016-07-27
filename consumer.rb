@@ -61,4 +61,3 @@ if __FILE__ == $0
     main(config_file)
   end
 end
-
