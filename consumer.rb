@@ -46,13 +46,13 @@ if __FILE__ == $0
   curr_dir = File.expand_path(File.dirname(__FILE__))
 
   opts = {
-      app_name: 'api_consumer',
-      dir_mode: :script,
-      dir: 'shared/pids',
-      log_dir: "#{ curr_dir }/shared/log",
-      log_output: true,
-      monitor: true,
-      multiple: true
+    app_name: 'api_consumer',
+    dir_mode: :script,
+    dir: 'shared/pids',
+    log_dir: "#{ curr_dir }/shared/log",
+    log_output: true,
+    monitor: true,
+    multiple: true
   }
 
   config_file = File.join(curr_dir, 'config')
