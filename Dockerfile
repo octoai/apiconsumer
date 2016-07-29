@@ -16,15 +16,12 @@ RUN mkdir -p $INSTALL_PATH
 WORKDIR /tmp
 COPY  Gemfile /tmp/Gemfile
 RUN bundle install
-RUN bundle update
 RUN gem install hashie
 
 #Copy application code from workstation to the working directory
 COPY  . $INSTALL_PATH
 
-#Symlink central config to app config
-#COPY  central-config  .
-#RUN ln -s config-master/ config/config
+#Entry Point
 WORKDIR $INSTALL_PATH
 CMD ["ruby", "consumer.rb", "start"]
 EXPOSE 9001
