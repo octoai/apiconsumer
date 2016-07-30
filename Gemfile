@@ -10,3 +10,7 @@ gem 'god'
 gem 'octorecommender'
 gem 'daemons'
 gem 'octonotification'
+
+group :test do
+  gem 'rspec'
+end
