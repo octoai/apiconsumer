@@ -15,7 +15,8 @@ RUN mkdir -p $INSTALL_PATH
 #Ensure gems are cached and only get updated when they change.
 WORKDIR /tmp
 COPY  Gemfile /tmp/Gemfile
-RUN bundle update
+COPY Gemfile.lock /tmp/Gemfile.lock
+RUN bundle install
 RUN gem install hashie
 
 #Copy application code from workstation to the working directory
