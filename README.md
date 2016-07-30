@@ -1,6 +1,8 @@
-# Events Consumer #
+# API Consumer #
 
 Consumes the events beacon calls from kafka queue and stores into cassandra.
+
+[![Build Status](https://travis-ci.org/octoai/apiconsumer.svg?branch=master)](https://travis-ci.org/octoai/apiconsumer)
 
 ## Setup ##
 
