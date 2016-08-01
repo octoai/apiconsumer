@@ -43,6 +43,8 @@ end
 
 if __FILE__ == $0
 
+  STDOUT.sync = true
+
   curr_dir = File.expand_path(File.dirname(__FILE__))
 
   opts = {
@@ -57,7 +59,8 @@ if __FILE__ == $0
 
   config_file = File.join(curr_dir, 'config')
 
-  Daemons.run_proc('api_consumer', opts) do
+  # Not starting in daemon mode
+#  Daemons.run_proc('api_consumer', opts) do
     main(config_file)
-  end
+#  end
 end

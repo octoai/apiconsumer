@@ -24,4 +24,5 @@ COPY  . $INSTALL_PATH
 
 #Entry Point
 WORKDIR $INSTALL_PATH
-CMD ["ruby", "consumer.rb", "start"]
+CMD ruby consumer.rb
+
