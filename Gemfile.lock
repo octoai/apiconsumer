@@ -23,7 +23,7 @@ GEM
     cequel (1.10.0)
       activemodel (~> 4.0)
       cassandra-driver (~> 2.0)
-    daemons (1.2.3)
+    daemons (1.2.4)
     descriptive_statistics (2.5.1)
     diff-lcs (1.2.5)
     dotenv (2.1.1)
@@ -65,7 +65,7 @@ GEM
     multi_json (1.12.1)
     multi_xml (0.5.5)
     multipart-post (2.0.0)
-    octocore (0.0.3)
+    octocore (0.0.4)
       cequel (~> 1.9, >= 1.9.0)
       descriptive_statistics (~> 2.5.1, >= 2.5.0)
       elasticsearch (~> 1.0.17, >= 1.0.17)
@@ -84,6 +84,7 @@ GEM
       apns (~> 1.0.0, >= 1.0.0)
       aws-sdk (~> 2.2.35, >= 2.2.35)
       gcm (~> 0.1.1, >= 0.1.0)
+      octorecommender (~> 0.0.1, >= 0.0.1)
     octorecommender (0.0.1)
       octocore (~> 0.0.1, >= 0.0.1)
       predictor (~> 2.3.1, >= 2.3.0)
@@ -148,9 +149,10 @@ DEPENDENCIES
   hooks
   json
   kafka-consumer
-  octocore (~> 0.0.2, >= 0.0.2)
+  octocore (~> 0.0.4, >= 0.0.4)
   octonotification
   octorecommender
   rspec
+
 BUNDLED WITH
    1.11.2
