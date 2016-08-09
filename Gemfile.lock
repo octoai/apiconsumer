@@ -65,7 +65,7 @@ GEM
     multi_json (1.12.1)
     multi_xml (0.5.5)
     multipart-post (2.0.0)
-    octocore (0.0.4)
+    octocore (0.0.5)
       cequel (~> 1.9, >= 1.9.0)
       descriptive_statistics (~> 2.5.1, >= 2.5.0)
       elasticsearch (~> 1.0.17, >= 1.0.17)
@@ -149,7 +149,7 @@ DEPENDENCIES
   hooks
   json
   kafka-consumer
-  octocore (~> 0.0.4, >= 0.0.4)
+  octocore (~> 0.0.5, >= 0.0.5)
   octonotification
   octorecommender
   rspec
