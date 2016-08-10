@@ -59,8 +59,7 @@ if __FILE__ == $0
 
   config_file = File.join(curr_dir, 'config')
 
-  # Not starting in daemon mode
-#  Daemons.run_proc('api_consumer', opts) do
+  Daemons.run_proc('api_consumer', opts) do
     main(config_file)
-#  end
+  end
 end
