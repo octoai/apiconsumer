@@ -10,7 +10,7 @@ gem 'god'
 gem 'octorecommender'
 gem 'daemons'
 gem 'octonotification'
-gem 'octomessageadapters'
+gem 'octomessageadapters', '~> 0.0.1', '>= 0.0.1'
 
 group :test do
   gem 'rspec'

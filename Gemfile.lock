@@ -156,7 +156,7 @@ DEPENDENCIES
   json
   kafka-consumer
   octocore (~> 0.0.5, >= 0.0.5)
-  octomessageadapters
+  octomessageadapters (~> 0.0.1, >= 0.0.1)
   octonotification
   octorecommender
   rspec
