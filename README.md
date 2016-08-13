@@ -4,13 +4,13 @@ Consumes the events beacon calls from kafka queue and stores into cassandra.
 
 [![Build Status](https://travis-ci.org/octoai/apiconsumer.svg?branch=master)](https://travis-ci.org/octoai/apiconsumer)
 
-## Setup ##
+# Setup #
 
 - Clone the repo
 - `git submodule init`
 - Perform `bundle install`
 
-## Start
+# Start
 
 ### Creating kafka topic before starting consumer
 
@@ -24,7 +24,7 @@ bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 -
 ```
 
 
-### Starting consumer
+## Daemonized
 
 ```bash
 ruby consumer.rb start
@@ -49,3 +49,9 @@ ruby consumer.rb stop
 
 - Available at `PROJ_DIR/shared/logs/`
 - Also check the `logfile` config at `config/config.yml`
+
+## Foreground
+
+```bash
+FOREGROUND=true ruby consumer.rb
+```

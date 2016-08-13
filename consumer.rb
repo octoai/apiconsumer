@@ -47,20 +47,25 @@ if __FILE__ == $0
   STDOUT.sync = true
 
   curr_dir = File.expand_path(File.dirname(__FILE__))
-
-  opts = {
-    app_name: 'api_consumer',
-    dir_mode: :script,
-    dir: 'shared/pids',
-    log_dir: "#{ curr_dir }/shared/log",
-    log_output: true,
-    monitor: true,
-    multiple: true
-  }
-
   config_file = File.join(curr_dir, 'config')
 
-  Daemons.run_proc('api_consumer', opts) do
-    main(config_file)
+  daemon_mode = !('true' == ENV['FOREGROUND'])
+  puts daemon_mode
+  if daemon_mode
+    opts = {
+      app_name: 'api_consumer',
+      dir_mode: :script,
+      dir: 'shared/pids',
+      log_dir: "#{ curr_dir }/shared/log",
+      log_output: true,
+      monitor: true,
+      multiple: true
+    }
+    Daemons.run_proc('api_consumer', opts) do
+      main(config_file)
+    end
+  else
+    main config_file
   end
 end
+
