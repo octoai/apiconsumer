@@ -103,6 +103,9 @@ GEM
     redis (3.2.2)
     redis-namespace (1.5.2)
       redis (~> 3.0, >= 3.0.4)
+    redis-queue (0.0.4)
+      hiredis (~> 0.5, >= 0.5.2)
+      redis (~> 3.0, >= 3.0.4)
     resque (1.26.0)
       mono_logger (~> 1.0)
       multi_json (~> 1.0)
@@ -159,4 +162,6 @@ DEPENDENCIES
   octomessageadapters (~> 0.0.1, >= 0.0.1)
   octonotification
   octorecommender
+  redis (~> 3.2.2, >= 3.2.0)
+  redis-queue (~> 0.0.4)
   rspec
