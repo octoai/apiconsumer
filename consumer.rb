@@ -6,7 +6,6 @@ require 'octocore'
 require 'octorecommender'
 require 'daemons'
 require 'octonotification'
-require 'octomessageadapters'
 
 Dotenv.load
 
