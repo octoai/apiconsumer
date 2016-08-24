@@ -23,14 +23,12 @@ class EventsConsumer
 
     # Check if kafka enabled
     if Octo.get_config(:kafka).fetch(:enabled)
-
       @consumer = Kafka::Consumer.new(Octo.get_config(:kafka).fetch(:client_id, 'apiconsumer' + rand(100).to_s),
                                     Octo.get_config(:kafka).fetch(:topic),
                                     zookeeper: Octo.get_config(:zookeeper, ZOOKEEPER),
                                     logger: Octo.logger)
       Signal.trap('INT') { @consumer.interrupt }
     else # Using Redis
-
       default_config = {
         host: '127.0.0.1', port: 6379
       }
@@ -51,7 +49,6 @@ class EventsConsumer
         end
       end
     rescue Exception => e
-      puts e
       Octo.logger.error(e)
     end
   end
