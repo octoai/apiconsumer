@@ -1,10 +1,11 @@
 require 'kafka-consumer'
+require 'redis'
+require 'redis-queue'
 require 'dotenv'
 require 'octocore'
 require 'octorecommender'
 require 'daemons'
 require 'octonotification'
-require 'octomessageadapters'
 
 Dotenv.load
 
@@ -14,24 +15,41 @@ class EventsConsumer
   ZOOKEEPER = ENV['ZOOKEEPER']
 
   def initialize(config_file=nil)
+    
     if config_file.nil?
       config_file = File.join(File.expand_path(File.dirname(__FILE__)), 'config')
     end
     Octo.connect_with config_file
-    @consumer = Kafka::Consumer.new(Octo.get_config(:kafka).fetch(:client_id, 'apiconsumer' + rand(100).to_s),
+
+    # Check if kafka enabled
+    if Octo.get_config(:kafka).fetch(:enabled)
+      @consumer = Kafka::Consumer.new(Octo.get_config(:kafka).fetch(:client_id, 'apiconsumer' + rand(100).to_s),
                                     Octo.get_config(:kafka).fetch(:topic),
                                     zookeeper: Octo.get_config(:zookeeper, ZOOKEEPER),
                                     logger: Octo.logger)
-    Signal.trap('INT') { @consumer.interrupt }
+      Signal.trap('INT') { @consumer.interrupt }
+    else # Using Redis
+      default_config = {
+        host: '127.0.0.1', port: 6379
+      }
+      redis = Redis.new(Octo.get_config(:redis, default_config))
+      @queue = Redis::Queue.new('octo', 'message', :redis => redis)
+    end
   end
 
   def startConsuming
-    @consumer.each do |message|
-      begin
-        handle(message.value)
-      rescue Exception => e
-        Octo.logger.error(e)
+    begin
+      if Octo.get_config(:kafka).fetch(:enabled)
+        @consumer.each do |message|
+          handle(message.value)
+        end
+      else # Using Redis
+        while message=@queue.pop
+          handle(message)
+        end
       end
+    rescue Exception => e
+      Octo.logger.error(e)
     end
   end
 
