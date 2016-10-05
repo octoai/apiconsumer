@@ -3,9 +3,11 @@ require 'redis'
 require 'redis-queue'
 require 'dotenv'
 require 'octocore'
-require 'octorecommender'
+# require 'octorecommender'
 require 'daemons'
-require 'octonotification'
+# require 'octonotification'
+require 'octomessageadapters'
+
 
 Dotenv.load
 
@@ -49,7 +51,7 @@ class EventsConsumer
         end
       end
     rescue Exception => e
-      Octo.logger.error(e)
+      puts e.message
     end
   end
 
